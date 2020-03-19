@@ -1,4 +1,6 @@
-from itertools import combinations
+# Genetic Algorithm to solve the Travelling Salesman Problem.
+
+from itertools import combinations, permutations, zip_longest
 import random
 
 # random.seed(1)
@@ -13,22 +15,32 @@ class Genetic_Algorithm:
 		for i in range(self.n_individuals):
 			chromosome = []
 			for _ in range(self.len_individual):
-				chromosome.append(random.randint(0,1))
+				while len(chromosome) < self.len_individual:
+					random_number = random.randrange(self.len_individual)
+					if random_number not in chromosome:
+						chromosome.append(random_number)
 			individuals[i] = (chromosome,[None, None])
 		return individuals
 
-	def get_fitness(self, individuals):		
+	def get_fitness(self, individuals, distancies):		
 		for individual in individuals:
 			fitness = 0
-			for i in range(self.len_individual):
-				if individuals[individual][0][i] == 1: fitness += 1
+			for i in range(self.len_individual-1):
+				city_u = individuals[individual][0][i]
+				city_v = individuals[individual][0][i+1]
+				cities = (city_u, city_v)
+				if (city_u, city_v) not in distancies:
+					cities = (city_v, city_u)
+				fitness += distancies[cities]
 			individuals[individual][1][0] = fitness
 		return individuals
 
 	def roulette_method(self, individuals): #seletion
 		individuals_values = list(individuals.values())
-		summation = sum(list(map(lambda gene: gene[1][0], individuals_values)))
-		chances = list(map(lambda gene: gene[1][0]/summation, individuals_values))
+		summation = sum(list(map(lambda gene: gene[1][0], individuals_values)))		
+		
+		inverse_chances = list(map(lambda gene: 1-(gene[1][0]/summation), individuals_values))
+		chances = list(map(lambda chance: chance/sum(inverse_chances), inverse_chances))
 
 		for individual, chance in zip(individuals, chances):
 			individuals[individual][1][1] = chance
@@ -50,9 +62,40 @@ class Genetic_Algorithm:
 				c_a, c_b = combination
 				index_c_a = c_a[0]
 				index_c_b = c_b[0]
-				slice_point = random.randint(0, self.len_individual)
-				new_c_a = (c_a[1][0][:slice_point] + c_b[1][0][slice_point:], [None, None])
-				new_c_b = (c_b[1][0][:slice_point] + c_a[1][0][slice_point:], [None, None])
+				slice_point = random.randrange(self.len_individual)
+				
+				new_c_a = c_a[1][0][:slice_point]
+				saw_c_b = False
+				while True:
+					if not saw_c_b:
+						for gene in c_b[1][0][slice_point:]:
+							if gene not in new_c_a:
+								new_c_a.append(gene)
+						saw_c_b = True
+
+					if len(new_c_a) != 6:
+						for gene in c_b[1][0]:
+							if gene not in new_c_a:
+								new_c_a.append(gene)
+					else: break
+				new_c_a = (new_c_a, [None, None])
+
+				new_c_b = c_b[1][0][:slice_point]
+				saw_c_a = False
+				while True:
+					if not saw_c_a:
+						for gene in c_b[1][0][slice_point:]:
+							if gene not in new_c_b:
+								new_c_b.append(gene)
+						saw_c_a = True
+
+					if len(new_c_b) != 6:
+						for gene in c_b[1][0]:
+							if gene not in new_c_b:
+								new_c_b.append(gene)
+					else: break
+				new_c_b = (new_c_b, [None, None])				
+
 				count_combination += 1
 				did_combination = True
 
@@ -66,19 +109,14 @@ class Genetic_Algorithm:
 	def mutation(self, individuals, rate_mutation):		
 		did_mutation = False
 		for individual, chromosome in individuals.items():			
-			for i in range(self.len_individual):				
-				if rate_mutation >= random.random():
-					if chromosome[0][i] == 0:
-						gene = 1
-						new_fitness = chromosome[1][0] + 1
-					else:
-						gene = 0
-						new_fitness = chromosome[1][0] - 1
-
-					new_chromosome = chromosome[0].copy(), [new_fitness, None]
-					new_chromosome[0][i] = gene
-					did_mutation = True
+			if rate_mutation >= random.random():
+				a, b = random.sample(list(range(self.len_individual)), k = 2)
+				new_chromosome = chromosome[0].copy()
+				temp_a = new_chromosome[a]
+				temp_b = new_chromosome[b]
+				new_chromosome[a], new_chromosome[b] = temp_b, temp_a
+				did_mutation = True
 			if did_mutation:
-				individuals[individual] = new_chromosome
+				individuals[individual] = [new_chromosome, [None, None]]
 				did_mutation = False
 		return individuals
