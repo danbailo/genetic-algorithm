@@ -1,122 +1,126 @@
 # Genetic Algorithm to solve the Travelling Salesman Problem.
 
-from itertools import combinations, permutations, zip_longest
+from itertools import combinations
 import random
 
-# random.seed(1)
-
 class Genetic_Algorithm:
-	def __init__(self, n_individuals, len_individual):
+	def __init__(self, n_individuals, nodes, initial):
 		self.n_individuals = n_individuals
-		self.len_individual = len_individual
+		self.nodes = nodes
+		self.initial = initial
+		self.population = list(self.nodes)
+		self.population.remove(self.initial)
 
 	def initialize_set(self):
-		individuals = {}
-		for i in range(self.n_individuals):
-			chromosome = []
-			for _ in range(self.len_individual):
-				while len(chromosome) < self.len_individual:
-					random_number = random.randrange(self.len_individual)
-					if random_number not in chromosome:
-						chromosome.append(random_number)
-			individuals[i] = (chromosome,[None, None])
+		individuals = []
+		while len(individuals) != self.n_individuals:
+			individuals.append((random.sample(self.population, k=len(self.population))))
 		return individuals
 
-	def get_fitness(self, individuals, distancies):		
+	def get_fitness(self, individuals, distancies):	
+		fitness = []	
 		for individual in individuals:
-			fitness = 0
-			for i in range(self.len_individual-1):
-				city_u = individuals[individual][0][i]
-				city_v = individuals[individual][0][i+1]
+			fit = 0
+			new_individual = [self.initial] + individual + [self.initial]
+			for i in range(len(self.population)+1):
+				city_u = new_individual[i]
+				city_v = new_individual[i+1]
 				cities = (city_u, city_v)
 				if (city_u, city_v) not in distancies:
-					cities = (city_v, city_u)
-				fitness += distancies[cities]
-			individuals[individual][1][0] = fitness
-		return individuals
+					cities = (city_v, city_u)					
+				fit += distancies[cities]
+			fitness.append((individual, fit))
+		return fitness
 
 	def roulette_method(self, individuals): #seletion
-		individuals_values = list(individuals.values())
-		summation = sum(list(map(lambda gene: gene[1][0], individuals_values)))		
-		
-		inverse_chances = list(map(lambda gene: 1-(gene[1][0]/summation), individuals_values))
-		chances = list(map(lambda chance: chance/sum(inverse_chances), inverse_chances))
+		fitness = sum(list(map(lambda fit: fit[1], individuals)))
+		p = [fit[1]/fitness for fit in individuals]
 
-		for individual, chance in zip(individuals, chances):
-			individuals[individual][1][1] = chance
-
-		new_individuals = {}
-		i = 0
-		while len(new_individuals) != len(individuals):			
-			for individual, chromosome in individuals.items():
-				if chromosome[1][1] >= random.random():
-					new_individuals[i] = (chromosome[0],[chromosome[1][0], None])
-			i += 1
+		new_individuals = []
+		while len(new_individuals) < len(individuals):	
+			sum_ = 0.0			
+			random_number = random.random()
+			for i in range(len(p)):
+				sum_ += p[i]
+				if random_number < sum_:
+					new_individuals.append(individuals[i][0])
+					break
 		return new_individuals
 
 	def recombination(self, individuals, rate_recombination):
 		count_combination = 0
 		did_combination = False
-		for combination in list(combinations(list(individuals.items()), 2)):
-			if rate_recombination >= random.random() and count_combination < 2: #crossover						
-				c_a, c_b = combination
-				index_c_a = c_a[0]
-				index_c_b = c_b[0]
-				slice_point = random.randrange(self.len_individual)
-				
-				new_c_a = c_a[1][0][:slice_point]
-				saw_c_b = False
-				while True:
-					if not saw_c_b:
-						for gene in c_b[1][0][slice_point:]:
-							if gene not in new_c_a:
-								new_c_a.append(gene)
-						saw_c_b = True
 
-					if len(new_c_a) != 6:
-						for gene in c_b[1][0]:
-							if gene not in new_c_a:
-								new_c_a.append(gene)
-					else: break
-				new_c_a = (new_c_a, [None, None])
+		new_individuals = []
 
-				new_c_b = c_b[1][0][:slice_point]
-				saw_c_a = False
-				while True:
-					if not saw_c_a:
-						for gene in c_b[1][0][slice_point:]:
-							if gene not in new_c_b:
-								new_c_b.append(gene)
-						saw_c_a = True
+		while len(new_individuals) < len(individuals):
+			for chromosome in individuals:
+				for combination in combinations(individuals, 2):
+					if not did_combination:
+						if rate_recombination >= random.random(): #crossover
+							if count_combination == 2:
+								did_combination = True
+								continue
 
-					if len(new_c_b) != 6:
-						for gene in c_b[1][0]:
-							if gene not in new_c_b:
-								new_c_b.append(gene)
-					else: break
-				new_c_b = (new_c_b, [None, None])				
+							c_a, c_b = combination
 
-				count_combination += 1
-				did_combination = True
+							slice_point = random.randint(1, len(self.population)-1)
+							# slice_point_b = random.randint(1, len(self.population)-1)
 
-			if did_combination:
-				individuals[index_c_a] = new_c_a
-				individuals[index_c_b] = new_c_b
-				did_combination = False
+							c_a_sliced = c_a[0][:slice_point]
+							c_b_sliced = c_b[0][:slice_point]
+							
+							saw_c_b = False
+							while True:
+								if not saw_c_b:
+									for gene in c_b_sliced:
+										if gene not in c_a_sliced:
+											c_a_sliced.append(gene)
+									saw_c_b = True					
 
-		return individuals
+								if len(c_a_sliced) < len(self.population):
+									for gene in c_b[0]:
+										if gene not in c_a_sliced:
+											c_a_sliced.append(gene)
+								else: break
+
+							saw_c_a = False
+							while True:
+								if not saw_c_a:
+									for gene in c_a_sliced:
+										if gene not in c_b_sliced:
+											c_b_sliced.append(gene)
+									saw_c_a = True					
+
+								if len(c_b_sliced) < len(self.population):
+									for gene in c_a[0]:
+										if gene not in c_b_sliced:
+											c_b_sliced.append(gene)
+								else: break	
+
+							new_individuals.append(c_a_sliced)
+							new_individuals.append(c_b_sliced)
+							count_combination += 1
+					else:
+						break
+				if len(new_individuals) == len(individuals): break
+				new_individuals.append(chromosome[0])
+		return new_individuals
 
 	def mutation(self, individuals, rate_mutation):		
 		did_mutation = False
-		for individual, chromosome in individuals.items():			
+		temp = list(range(len(self.population)))
+		for i in range(len(individuals)):			
 			if rate_mutation >= random.random():
-				a, b = random.sample(list(range(self.len_individual)), k = 2)
-				new_chromosome = chromosome[0].copy()
+				a, b = random.sample(temp, k = 2)
+				new_chromosome = individuals[i][0].copy()
 				temp_a = new_chromosome[a]
 				temp_b = new_chromosome[b]
 				new_chromosome[a], new_chromosome[b] = temp_b, temp_a
 				did_mutation = True
 			if did_mutation:
-				individuals[individual] = [new_chromosome, [None, None]]
+				individuals[i] = new_chromosome
 				did_mutation = False
-		return individuals
+			else:
+				individuals[i] = individuals[i][0]
+		return individuals		

@@ -18,31 +18,37 @@ if __name__ == "__main__":
 		distancies[data_encoded[city1], data_encoded[city2]] = value
 
 	n_individuals = 10
-	nodes = data["nodes"]
-	epochs = 1000
-	rate_recombination = 0.3
+	nodes = data_encoded.values()
+
+	node_initial = "Campo Grande"
+	initial = data_encoded[node_initial]
+
+	epochs = 10000
+	rate_recombination = 0.7
 	rate_mutation = 0.03	
 
-	genetic_algorithm = Genetic_Algorithm(n_individuals, nodes)
-
+	genetic_algorithm = Genetic_Algorithm(n_individuals, nodes, initial)
 	individuals = genetic_algorithm.initialize_set()
-	individuals = genetic_algorithm.get_fitness(individuals, distancies)
-	print(f"\nFirst set; Fitness Total - {sum(list(map(lambda gene: gene[1][0], list(individuals.values()))))}")
-	for chromosome in sorted(individuals.values(), key=lambda gene: gene[1][0]):
-		print(f"{chromosome[0]}; Fitness - {chromosome[1][0]}")
+	individuals = genetic_algorithm.get_fitness(individuals, distancies)	
+	for chromosome in individuals:
+		print(chromosome)
+	print()
 
-	print(f"Minor - {min(individuals.values(), key=lambda gene: gene[1][0])[1][0]}")
 
 	for _ in range(epochs):
 		individuals = genetic_algorithm.roulette_method(individuals)
+		individuals = genetic_algorithm.get_fitness(individuals, distancies)
+		for chromosome in individuals:
+			print(chromosome)
+		print()		
+		exit()
 
 		individuals = genetic_algorithm.recombination(individuals, rate_recombination)
 		individuals = genetic_algorithm.get_fitness(individuals, distancies)
 
-		individuals = genetic_algorithm.mutation(individuals, rate_mutation)
+		individuals = genetic_algorithm.mutation(individuals, rate_recombination)
 		individuals = genetic_algorithm.get_fitness(individuals, distancies)
 
-	print(f"\nLast set; Fitness Total - {sum(list(map(lambda gene: gene[1][0], list(individuals.values()))))}")
-	for chromosome in sorted(individuals.values(), key=lambda gene: gene[1][0]):
-		print(f"{chromosome[0]}; Fitness - {chromosome[1][0]}")
-	print(f"Minor - {min(individuals.values(), key=lambda gene: gene[1][0])[1][0]}")		
+	for chromosome in individuals:
+		print(chromosome)
+	print()		
