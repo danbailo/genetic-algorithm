@@ -29,11 +29,12 @@ class Genetic_Algorithm:
 				if (city_u, city_v) not in distancies:
 					cities = (city_v, city_u)					
 				fit += distancies[cities]
-			fitness.append((individual, fit))
+			fitness.append((individual, 1/fit)) #1e9 pra n dar erro de float
 		return fitness
 
 	def roulette_method(self, individuals): #seletion
 		fitness = sum(list(map(lambda fit: fit[1], individuals)))
+
 		p = [fit[1]/fitness for fit in individuals]
 
 		new_individuals = []
@@ -65,7 +66,6 @@ class Genetic_Algorithm:
 							c_a, c_b = combination
 
 							slice_point = random.randint(1, len(self.population)-1)
-							# slice_point_b = random.randint(1, len(self.population)-1)
 
 							c_a_sliced = c_a[0][:slice_point]
 							c_b_sliced = c_b[0][:slice_point]
